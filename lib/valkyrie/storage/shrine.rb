@@ -110,6 +110,27 @@ module Valkyrie
         false
       end
 
+      def find_versions(id:)
+        versions = []
+        versions << find_by(id: id)
+      end
+
+      def upload_version(id:, file:, **upload_options)
+        upload_options.delete(:fake_upload_argument)
+        identifier = shrine_id_for(id)
+        begin
+          shrine.upload(file, identifier, **upload_options)
+        rescue => exception
+          puts exception.backtrace
+          raise
+        end
+        find_by(id: "#{protocol_with_prefix}#{identifier}").tap do |result|
+          if verifier
+            raise Valkyrie::Shrine::IntegrityError unless verifier.verify_checksum(file, result)
+          end        
+        end
+      end
+ 
       private
 
         def try_to_find_verifier
